@@ -1,7 +1,41 @@
 import './index.css'
 
-import numeral from 'numeral';
+import {getUsers, deleteUser} from './api/userApi'
 
-const value =numeral(1000).format('$0,0.00');
+// Populate table of users via API call
+getUsers().then(result => {
+  let usersBody = "";
 
-console.log("I would pay "+value+" for this!");
+  result.forEach(user => {
+    usersBody+=`<tr>
+      <td><a href="#" data-id=${user.id} class="deleteUser">Delete</a></td>
+      <td>${user.id}</td>
+      <td>${user.firstName}</td>
+      <td>${user.lastName}</td>
+      <td>${user.email}</td>
+      </tr>`
+  });
+
+  global.document.getElementById('users').innerHTML = usersBody;
+
+  const deleteLinks = global.document.getElementsByClassName('deleteUser');
+
+
+  // Must use Array.from to create a real array from a DOM collection
+  Array.from(deleteLinks, link => {
+
+    link.onclick = function(event) {
+
+      const element = event.target;
+      event.preventDefault();
+      const id = element.attributes["data-id"].value;
+
+      deleteUser(id);
+      const tr = element.parentNode.parentNode;
+
+      tr.parentNode.removeChild(tr);
+    };
+  });
+});
+
+
