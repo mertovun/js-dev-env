@@ -1,29 +1,71 @@
 import path from 'path';
-import webpack from 'webpack';
+import HtmlWebpackPlugin from 'html-webpack-plugin';
+import WebpackMd5Hash from 'webpack-md5-hash';
+//import ExtractTextPlugin from 'extract-text-webpack-plugin';
 
 export default {
   mode: 'production',
   devtool: 'source-map',
 
-  entry: [
-    path.resolve(__dirname, 'src/index')
-  ],
+  entry: {
+    //vendor: path.resolve(__dirname, 'src/vendor'),
+    main: path.resolve(__dirname, 'src/index')
+  },
   target: 'web',
   output: {
     path: path.resolve(__dirname, 'dist'),
     publicPath: '/',
-    filename: 'bundle.js'
+    filename: '[name].[chunkhash].js'
+  },
+  optimization: {
+    minimize: true,
+    splitChunks: {
+      chunks: 'all',
+      maxInitialRequests: Infinity,
+      minSize: 0,
+      cacheGroups: {
+        vendor: {
+          test: /[\\/]node_modules[\\/]/,
+          name(module) {
+            // get the name. E.g. node_modules/packageName/not/this/part.js
+            // or node_modules/packageName
+            const packageName = module.context.match(/[\\/]node_modules[\\/](.*?)([\\/]|$)/)[1];
+
+            // npm package names are URL-safe, but some servers don't like @ symbols
+            return `npm.${packageName.replace('@', '')}`;
+          },
+        },
+      },
+    },
   },
   plugins: [
-    // Eliminate duplicate packages when generating bundle
-    new webpack.optimize.DedupePlugin(),
-    // Minify JS
-    new webpack.optimize.UglifyJSPlugin()
+    // Generate an external css file with a hash in the filename
+    //new ExtractTextPlugin('[name].[contenthash].css'),
+    // Hash files using MD5 so that their names change when the content changes
+    new WebpackMd5Hash(),
+    // Create HTML file that includes reference to bundled JS.
+    new HtmlWebpackPlugin({
+      template: 'src/index.html',
+      minify: {
+        removeComments:true,
+        collapseWhitespace:true,
+        removeRedundantAttributes:true,
+        useShortDoctype:true,
+        removeEmptyAttributes:true,
+        removeStyleLinkTypeAttributes:true,
+        keepClosingSlash:true,
+        minifyJS:true,
+        minifyCSS:true,
+        minifyURLs:true
+      },
+      inject: true
+    })
   ],
   module: {
     rules: [
       {test: /\.js$/, exclude: /node_modules/, loaders: ['babel-loader']},
-      {test: /\.css$/, loaders: ['style-loader','css-loader']}
+      {test: /\.css$/, loader: ['style-loader','css-loader']}
+      //{test: /\.css$/, loader: ExtractTextPlugin.extract('css?sourcemap')}
     ]
   }
 }
